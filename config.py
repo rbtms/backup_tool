@@ -1,14 +1,17 @@
 import os
 import time
 from pathlib import Path
+import tempfile
 import yaml
 from filegroup import FileGroup
 from backup_manager import ManagerType
+from backup_drive import get_config_file_contents, update_config_file
 
 class Config:
-    DEFAULT_FILEPATH = os.path.join(os.path.expanduser('~'), '.backup_config_yaml')
+    DEFAULT_FILEPATH = os.path.join(os.path.expanduser('~'), '.backup_config.yaml')
     DEFAULT_ROTATION_NUMBER = 4
     DEFAULT_MANAGER_TYPE = ManagerType('LOCAL')
+    TRY_TO_FETCH_REMOTE_CONFIG = True
 
     def __init__(self, epoch=0):
         self.time = int(time.time()) if epoch == 0 else epoch
@@ -18,7 +21,7 @@ class Config:
         self.manager_type: ManagerType = self.DEFAULT_MANAGER_TYPE
 
     def __str__(self):
-        return yaml.dump(self.to_dict(), Dumper=yaml.Dumper)
+        return yaml.dump(self.to_dict(), Dumper=yaml.Dumper, sort_keys=False)
 
     def find_group_with_name(self, name):
         """Search for a group with a given name"""
@@ -51,16 +54,32 @@ class Config:
 
         self.groups.remove(self.find_group_with_name(name))
 
-    def load(self, filepath=DEFAULT_FILEPATH):
-        """Load config from a file"""
-        if Path(filepath).is_file():
-            with open(filepath, 'r', encoding='utf8') as file:
-                config = yaml.load(file, Loader=yaml.Loader)
+    def load(self):
+        """Load config from remote, and a file if it fails"""
+        config_yaml = None
 
-                self.time = config['time']
-                self.rotation_number = config['rotation_number']
-                self.manager_type = ManagerType(config['manager_type'])
-                self.groups = self._parse_groups(config['groups'], self.manager_type)
+        if self.TRY_TO_FETCH_REMOTE_CONFIG:
+            config_yaml = get_config_file_contents()
+
+        # If the config doesn't exist on remote, attempt to load it on local
+        if config_yaml is None:
+            if Path(self.DEFAULT_FILEPATH).is_file():
+                try:
+                    with open(self.DEFAULT_FILEPATH, 'r', encoding='utf8'):
+                        config_yaml = f.read()
+                #
+                except Exception:
+                    ...
+
+        # Load if if any of the two has resulted in success.
+        # Otherwise keep going with the existing (default one)
+        if config_yaml is not None:
+            config = yaml.load(config_yaml, Loader=yaml.Loader)
+
+            self.time = config['time']
+            self.rotation_number = config['rotation_number']
+            self.manager_type = ManagerType(config['manager_type'])
+            self.groups = self._parse_groups(config['groups'], self.manager_type)
 
     def _parse_groups(self, groups_dict: dict, manager_type: ManagerType):
         """Parse groups from a dictionary"""
@@ -72,13 +91,22 @@ class Config:
 
         return groups
 
-    def save(self, filepath=DEFAULT_FILEPATH):
-        """Save config to a file"""
+    def save(self):
+        """Save config to a file, local or remote"""
         config_dict = self.to_dict(int(time.time()))
         config_yaml = yaml.dump(config_dict, Dumper=yaml.Dumper)
 
-        with open(filepath, 'w', encoding='utf8') as file:
-            file.write(config_yaml)
+        if self.manager_type == ManagerType.LOCAL:
+            with open(self.DEFAULT_FILEPATH, 'w', encoding='utf8') as file:
+                file.write(config_yaml)
+        elif self.manager_type == ManagerType.DRIVE:
+            # Dont delete by default in case there's an error
+            _, tmpfile = tempfile.mkstemp()
+
+            with open(tmpfile, 'w', encoding='utf8') as file:
+                file.write(config_yaml)
+
+            update_config_file(tmpfile)
 
     def to_dict(self, t=None):
         return {

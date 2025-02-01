@@ -2,7 +2,7 @@
 import argparse
 from config import Config
 from backup_manager import BackupManager
-from backup_drive import get_remote_file, delete_remote_file
+from backup_drive import get_remote_file, upload_remote_file, delete_remote_file
 
 def get_parser():
     """
@@ -36,7 +36,7 @@ def get_parser():
     # group addfile
     addfile_parser = subparsers.add_parser("addfile", aliases=['fileadd'], help="Add a file to a group")
     addfile_parser.add_argument("group_name", type=str, help="Name of the group to add the file to")
-    addfile_parser.add_argument("filename", type=str, help="Relative filepath")
+    addfile_parser.add_argument("filename", type=str, help="Filepath")
 
     # group removefile
     removefile_parser = subparsers.add_parser("removefile", aliases=['fileremove'], help="Remove a file from a group")
@@ -69,6 +69,10 @@ def get_parser():
     remote_get_parser = subparsers.add_parser('remoteget', help='Get a remote file')
     remote_get_parser.add_argument("file_id", type=str, help="Id of the file")
     remote_get_parser.add_argument("target_dir", type=str, help="Target directory")
+
+    # remote upload
+    remote_remove_parser = subparsers.add_parser('remoteupload', help='Upload a file to remote')
+    remote_remove_parser.add_argument("filename", type=str, help="Filename")
 
     # remote remove
     remote_remove_parser = subparsers.add_parser('remotedel', help='Remove a remote file')
@@ -154,6 +158,7 @@ def main():
     config.load()
 
     if args.command is None:
+        print()
         print(config)
     elif args.command == 'list':
         list_current_backups(config.manager_type)
@@ -182,6 +187,8 @@ def main():
         restore_group(args.group_name, config)
     elif args.command == 'remoteget':
         get_remote_file(args.file_id, args.target_dir)
+    elif args.command == 'remoteupload':
+        upload_remote_file(args.filename)
     elif args.command == 'remotedel':
         delete_remote_file(args.file_id)
     else:

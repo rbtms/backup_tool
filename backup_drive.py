@@ -1,14 +1,19 @@
 import os
 import io
+import tempfile
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
+from output_formatting import print_directory_tree
 
 credentials = service_account.Credentials.from_service_account_file(
     filename=os.path.join(os.path.dirname(__file__), '.client_secrets.json')
 )
+
+CONFIG_FILE_NAME = '.backup_config.yaml'
+CONFIG_FILE_ROTATION = 4
 
 class DriveFile:
     def __init__(self, file_dict, service):
@@ -53,9 +58,11 @@ class DriveFile:
                     for file in self._service.files().list(q=f"'{self.id}' in parents").execute()['files'] ]
 
 class BackupDrive():
+    CONFIG_FILE_NAME = '.backup_config.yaml'
+
     def __init__(self, name):
         self._group_backup_folder = name
-        self._service = build('drive', 'v3', credentials=credentials)
+        self._service = build_service()
 
     def _bytes_to_readable_amount(self, byte_n: int):
         """Convert a number of bytes to a readable string"""
@@ -80,7 +87,7 @@ class BackupDrive():
     def _get_root_files(self):
         """Get the files in the root folder"""
         return [ DriveFile(file, self._service)
-                for file in self._service.files().list(q=f"parents = 'root'").execute()['files'] ]
+                for file in self._service.files().list(q="parents = 'root'").execute()['files'] ]
 
     def _get_files_in_dir_by_name(self, folder_name):
         """Get the files from the first dir in the root with a given name"""
@@ -102,23 +109,35 @@ class BackupDrive():
         return None
 
     def _upload_file(self, filepath, dir_name, filename):
+        """
+            Upload a file
+            - filepath: File path of the file to upload
+            - dir_name: Parent directory in drive. If None, it uploads it to the root
+            - filename: Filename the file is to be uploaded as
+        """
         print(f'...Uploading {filepath}')
-        dir_id = self._get_directory_id(dir_name)
 
-        if dir_id is not None:
-            try:
-                file_metadata = {'name': filename, 'parents': [dir_id]}
-                media = MediaFileUpload(filepath, resumable=True)
+        try:
+            file_metadata = {'name': filename}
 
-                self._service.files().create(
-                    body=file_metadata,
-                    media_body=media,
-                    fields='id'
-                ).execute()
-            except HttpError as err:
-                print(f"An error occurred: {err}")
-        else:
-            raise ValueError('Could not upload backup. Directory ' + dir_name + ' doesn\'t exist.')
+            # Add parent directory
+            if dir_name is not None:
+                dir_id = self._get_directory_id(dir_name)
+                if dir_id is not None:
+                    file_metadata['parents']: [dir_id]
+                else:
+                    raise ValueError('Could not upload backup. Directory ' + dir_name + ' doesn\'t exist.')
+
+            media = MediaFileUpload(filepath, resumable=True)
+
+            self._service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+        except HttpError as err:
+            print(f"An error occurred: {err}")
+
 
     def _change_file_name(self, file_id, new_name):
         self._service.files().update(fileId=file_id, body={'name': new_name}).execute()
@@ -162,19 +181,30 @@ class BackupDrive():
         self._upload_file(zip_path, self._group_backup_folder, 'backup.zip')
 
     def list_backups(self, files=None, indent=0):
-        if files is None: files = self._get_root_files()
+        tree_dict = {}
+
+        if files is None:
+            files = self._get_root_files()
 
         for file in files:
-            print(f"{' '*indent} {file.name}\t\t\t - {file.id}")
+            tree_dict[file.name] = { 'id': file.id, 'files': [] }
 
             if file.is_dir:
-                self.list_backups(file.get_folder_files(), indent+4)
+                _tree_dict = self.list_backups(file.get_folder_files(), indent+4)
+                tree_dict[file.name]['files'] = _tree_dict
 
+        # Print structure as a tree now that it has finished
         if indent == 0:
+            print()
+            print('Drive')
+            print_directory_tree(tree_dict)
             self._print_storage_quotas()
+            print()
+        else:
+            return tree_dict
 
     def clean_backups(self):
-         for file in self._get_root_files():
+        for file in self._get_root_files():
             if file.is_dir and file.name == self._group_backup_folder:
                 file.delete()
 
@@ -197,12 +227,65 @@ class BackupDrive():
             for file in files:
                 file.download(os.path.join(target_dir, file.name))
 
+def build_service():
+    return build('drive', 'v3', credentials=credentials)
+
 def get_remote_file(file_id, target_dir):
-    service = build('drive', 'v3', credentials=credentials)
-    file = DriveFile({'id': file_id, 'name': '', 'mimeType': ''}, service)
-    file.download(os.path.join(target_dir, 'backup.zip'))
+    service = build_service()
+
+    # Get file metadata
+    file_dict = service.files().get(fileId=file_id).execute()
+
+    file = DriveFile(file_dict, service)
+    file.download(os.path.join(target_dir, file_dict['name']))
+
+def upload_remote_file(filepath):
+    manager = BackupDrive('noname')
+    manager._upload_file(filepath, None, os.path.basename(filepath))
 
 def delete_remote_file(file_id):
-    service = build('drive', 'v3', credentials=credentials)
+    service = build_service()
     file = DriveFile({'id': file_id, 'name': '', 'mimeType': ''}, service)
     file.delete()
+
+def get_config_file_contents():
+    temp_dir = tempfile.TemporaryDirectory()
+    manager = BackupDrive('noname')
+    files = manager._get_root_files()
+
+    if any([ file.name == CONFIG_FILE_NAME for file in files ]):
+        temp_path = os.path.join(temp_dir.name, CONFIG_FILE_NAME)
+        file = [ file for file in files if file.name == CONFIG_FILE_NAME ][0]
+        file.download(temp_path)
+
+        with open(temp_path, 'r', encoding='utf8') as f:
+            return f.read()
+    else:
+        print("Couldn't read remote config file.")
+        return None
+
+def update_config_file(filepath):
+    manager = BackupDrive('noname')
+    files = manager._get_root_files()
+
+    # Rotate config files
+
+    # Remove .backup_config.yaml.4
+    if any([file.name == f'{CONFIG_FILE_NAME}.4' for file in files]):
+        file = [ file for file in files if file.name == f'{CONFIG_FILE_NAME}.4' ][0]
+        file.delete()
+
+    # .backup_config.yaml.1 -> .backup_config.yaml.2...
+    for n in range(CONFIG_FILE_ROTATION):
+        m = CONFIG_FILE_ROTATION - n
+        if any([file.name == f'{CONFIG_FILE_NAME}.{m-1}' for file in files]):
+            file = [ file for file in files if file.name == f'{CONFIG_FILE_NAME}.{m-1}' ][0]
+            file.change_name(f'{CONFIG_FILE_NAME}.{m}')
+
+    # .backup_config.yaml.zip -> .backup_config.yaml.1
+    if any([file.name == CONFIG_FILE_NAME for file in files]):
+        file = [ file for file in files if file.name == CONFIG_FILE_NAME ][0]
+        file.change_name(f'{CONFIG_FILE_NAME}.1')
+
+    # Upload file
+    manager._upload_file(filepath, None, CONFIG_FILE_NAME)
