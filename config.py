@@ -2,7 +2,6 @@ import os
 import time
 from pathlib import Path
 import yaml
-
 from filegroup import FileGroup
 from backup_manager import ManagerType
 

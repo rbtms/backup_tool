@@ -16,6 +16,7 @@ class FileGroup:
         self._basepath = basepath
         self._files: list[File] = []
         self._md5 = self.digest() if digest is None else digest
+        self._backup_manager = BackupManager(self, manager_type)
 
     def get_name(self): return self._name
     def get_basepath(self): return self._basepath
@@ -84,18 +85,18 @@ class FileGroup:
         self._files.remove(file)
 
     def backup(self, rotation_number: int):
-        BackupManager(self).backup(rotation_number)
+        self._backup_manager.backup(rotation_number)
 
     def get_latest_backup(self, target_dir):
         """Copy the latest backup to a directory"""
-        BackupManager(self).get_latest(target_dir)
+        self._backup_manager.get_latest(target_dir)
 
     def clean_backups(self):
         """Remove backups"""
-        BackupManager(self).clean_backups()
+        self._backup_manager.clean_backups()
 
     def restore(self):
-        BackupManager(self).restore()
+        self._backup_manager.restore()
 
     def to_dict(self):
         return {
