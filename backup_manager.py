@@ -85,15 +85,22 @@ class BackupManager():
     def list_backups(self):
         self._manager.list_backups()
 
-    def get_latest(self, target_dir):
+    def get_latest_backup(self, target_dir):
         print('...Getting latest backup')
         self._manager.copy_latest_backup(target_dir)
+
+    def get_all_backups(self, target_dir):
+        group_dir = os.path.join(target_dir, self.group.get_name())
+        print(f'...Copying {self.group.get_name()} to {group_dir}')
+
+        os.makedirs(group_dir, exist_ok=True)
+        self._manager.copy_all_backups(group_dir)
 
     def restore(self):
         # First uncompress in a temporary folder in case there is any error
         temp_dir = tempfile.TemporaryDirectory()
 
-        self.get_latest(temp_dir.name)
+        self.get_latest_backup(temp_dir.name)
 
         # Extract zip
         print('...Extracting zip')

@@ -1,10 +1,12 @@
 import os
 import shutil
+import pathlib
 
 class BackupLocal():
     BACKUP_FOLDER = '/home/alvaro/backups' # Folder where to put the backups
 
     def __init__(self, group_name):
+        self._group_name = group_name
         self._group_backup_folder = os.path.join(self.BACKUP_FOLDER, group_name)
 
     def create_dir(self):
@@ -33,6 +35,11 @@ class BackupLocal():
             shutil.copy(zip_path, target_dir)
         else:
             print('There are no backups in ' + self._group_backup_folder + '.')
+
+    def copy_all_backups(self, target_dir):
+        """Copy all backups for a given group to a directory"""
+        for file in pathlib.Path(self._group_backup_folder).iterdir():
+            shutil.copy(str(file.absolute()), target_dir)
 
     def retrieve(self):
         ...

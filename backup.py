@@ -15,6 +15,7 @@ def get_parser():
             setproperty <group name> <attribute name> <attribute value>
             backup <group name>
             get <group name> <target directory>
+            getall
             restore <group name>
     """
     parser = argparse.ArgumentParser(description="Backup utilities")
@@ -56,6 +57,9 @@ def get_parser():
     get_group_backup_parser = subparsers.add_parser("get", help="Copy the latest backup a group to a directory")
     get_group_backup_parser.add_argument("group_name", type=str, help="Name of the group")
     get_group_backup_parser.add_argument("target_dir", type=str, help="Target directory")
+
+    get_all_parser = subparsers.add_parser('getall', help="Copy all the files to a directory")
+    get_all_parser.add_argument("target_dir", type=str, help="Target directory")
 
     # group restore
     backup_group_parser = subparsers.add_parser("restore", help="Restore a group backup")
@@ -127,6 +131,10 @@ def get_backup(group_name, target_dir, config):
     group = get_group(group_name, config)
     group.get_latest_backup(target_dir)
 
+def get_all_backups(target_dir, config):
+    for group in config.groups:
+        group.get_all_backups(target_dir)
+
 def list_current_backups(manager_type):
     BackupManager(None, manager_type).list_backups()
 
@@ -166,6 +174,8 @@ def main():
         config.save()
     elif args.command == 'get':
         get_backup(args.group_name, args.target_dir, config)
+    elif args.command == 'getall':
+        get_all_backups(args.target_dir, config)
     elif args.command == 'save':
         backup_group(args.group_name, config)
     elif args.command == 'restore':

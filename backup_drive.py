@@ -20,12 +20,16 @@ class DriveFile:
         self._service = service
 
     def delete(self):
+        print(f'...Deleting {self.name} ({self.id})')
         self._service.files().delete(fileId=self.id).execute()
 
     def change_name(self, new_name):
+        print(f'...Changing name of {self.name} to {new_name}')
         self._service.files().update(fileId=self.id, body={'name': new_name}).execute()
 
     def download(self, path):
+        print(f'...Downloading {self.name} ({self.id})')
+
         try:
             request_file = self._service.files().get_media(fileId=self.id)
             file = io.BytesIO()
@@ -98,6 +102,7 @@ class BackupDrive():
         return None
 
     def _upload_file(self, filepath, dir_name, filename):
+        print(f'...Uploading {filepath}')
         dir_id = self._get_directory_id(dir_name)
 
         if dir_id is not None:
@@ -181,6 +186,16 @@ class BackupDrive():
             file.download(os.path.join(target_dir, 'backup.zip'))
         else:
             raise ValueError(self._group_backup_folder + ' does not have any backups.')
+
+    def copy_all_backups(self, target_dir):
+        """Copy all backups for a given group to a directory"""
+        files = self._get_files_in_dir_by_name(self._group_backup_folder)
+
+        if files is None:
+            print(f'...File group {self._group_backup_folder} doesn\'t exist.')
+        else:
+            for file in files:
+                file.download(os.path.join(target_dir, file.name))
 
 def get_remote_file(file_id, target_dir):
     service = build('drive', 'v3', credentials=credentials)
