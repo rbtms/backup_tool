@@ -7,7 +7,7 @@ from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
 
 credentials = service_account.Credentials.from_service_account_file(
-    filename=os.path.join(os.path.dirname(__file__), 'client_secrets.json')
+    filename=os.path.join(os.path.dirname(__file__), '.client_secrets.json')
 )
 
 class DriveFile:
