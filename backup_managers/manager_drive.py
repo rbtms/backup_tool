@@ -1,7 +1,7 @@
 import os
 import io
 import tempfile
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build, Resource
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
@@ -227,7 +227,7 @@ class BackupDrive():
             for file in files:
                 file.download(os.path.join(target_dir, file.name))
 
-def build_service():
+def build_service() -> Resource:
     return build('drive', 'v3', credentials=credentials)
 
 def get_remote_file(file_id, target_dir):
