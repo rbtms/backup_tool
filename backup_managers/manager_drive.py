@@ -73,11 +73,11 @@ class ManagerDrive(AbstractManager):
         if byte_n < 1024:
             return str(byte_n) + ' Bytes'
         elif byte_n < 1024**2:
-            return str(byte_n/(1024**1))[:4] + ' KB'
+            return str(round(byte_n/(1024**1), 2)) + ' KB'
         elif byte_n < 1024**3:
-            return str(byte_n/(1024**2))[:4] + ' MB'
+            return str(round(byte_n/(1024**2), 2)) + ' MB'
         elif byte_n < 1024**4:
-            return str(byte_n/(1024**3))[:4] + ' GB'
+            return str(round(byte_n/(1024**3), 2)) + ' GB'
         else:
             raise ValueError('Invalid byte number:', byte_n)
 

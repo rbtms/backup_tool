@@ -149,9 +149,10 @@ class BackupManager():
                     if file.exists():
                         # Move file to temporary dir
                         shutil.move(file.get_filepath(), filepath_in_replaced_files_dir)
-                        # Move extracted file to original path
-                        shutil.move(filepath_in_temp, file.get_filepath())
-                        print('...Restored', file.get_relpath())
+
+                    # Move extracted file to original path
+                    shutil.move(filepath_in_temp, file.get_filepath())
+                    print('...Restored', file.get_relpath())
 
             print('...Previous files moved to ' + replaced_files_dir)
         else:
