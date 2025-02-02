@@ -2,7 +2,7 @@
 import argparse
 from config import Config
 from backup_manager import BackupManager
-from backup_drive import get_remote_file, upload_remote_file, delete_remote_file
+from backup_managers.backup_drive import get_remote_file, upload_remote_file, delete_remote_file
 
 def get_parser():
     """
