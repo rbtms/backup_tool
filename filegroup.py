@@ -1,10 +1,11 @@
 import os
 import hashlib
+from typing import Optional
 from file import File, Filetype
 from backup_manager import BackupManager, ManagerType
 
 class FileGroup:
-    def __init__(self, name='unnamed_group', basepath='', digest=None, manager_type: ManagerType = None):
+    def __init__(self, name='unnamed_group', basepath='', digest = None, manager_type: Optional[ManagerType] = None):
         if basepath is None or basepath == '':
             raise ValueError('basepath can\'t be empty.')
         elif manager_type is None:

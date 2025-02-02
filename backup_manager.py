@@ -4,8 +4,8 @@ import shutil
 import tempfile
 from enum import Enum
 from file import Filetype
-from backup_local import BackupLocal
-from backup_drive import BackupDrive
+from backup_managers.manager_local import BackupLocal
+from backup_managers.manager_drive import BackupDrive
 
 class ManagerType(Enum):
     LOCAL = 'LOCAL'

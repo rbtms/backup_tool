@@ -5,7 +5,7 @@ import tempfile
 import yaml
 from filegroup import FileGroup
 from backup_manager import ManagerType
-from backup_managers.backup_drive import get_config_file_contents, update_config_file
+from backup_managers.manager_drive import get_config_file_contents, update_config_file
 
 class Config:
     DEFAULT_FILEPATH = os.path.join(os.path.expanduser('~'), '.backup_config.yaml')
@@ -65,7 +65,7 @@ class Config:
         if config_yaml is None:
             if Path(self.DEFAULT_FILEPATH).is_file():
                 try:
-                    with open(self.DEFAULT_FILEPATH, 'r', encoding='utf8'):
+                    with open(self.DEFAULT_FILEPATH, 'r', encoding='utf8') as f:
                         config_yaml = f.read()
                 #
                 except Exception:
