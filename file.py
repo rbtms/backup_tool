@@ -22,6 +22,7 @@ class File:
     def get_filepath(self): return self._filepath
     def get_relpath(self): return self._relpath
     def get_filetype(self): return self._filetype
+    def get_digest(self): return self._md5
 
     def digest(self):
         """Calculate the MD5 digest of the file"""
@@ -54,6 +55,9 @@ class File:
             _hash.update(file.read())
 
         return _hash.hexdigest().encode('utf8')
+
+    def update_digest(self):
+        self._md5 = self.digest().decode()
 
     def exists(self):
         """Check if file exists"""

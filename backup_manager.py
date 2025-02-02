@@ -3,7 +3,8 @@ import zipfile
 import shutil
 import tempfile
 from enum import Enum
-from file import Filetype
+#from filegroup import FileGroup
+from file import File, Filetype
 from backup_managers.manager_local import ManagerLocal
 from backup_managers.manager_drive import ManagerDrive
 from backup_managers.abstract_manager import AbstractManager
@@ -106,30 +107,52 @@ class BackupManager():
         os.makedirs(group_dir, exist_ok=True)
         self._manager.copy_all_backups(group_dir)
 
+    def _extract_zip(self, target_dir, filename):
+        print('...Extracting zip')
+        with zipfile.ZipFile(os.path.join(target_dir, filename), 'r') as zipf:
+            zipf.extractall(target_dir)
+
+    def _digest_coincides(self, target_dir):
+        """Check if the digest for all the files present in target_dir coincide"""
+        for file in self.group.get_files():
+            filepath_in_temp = os.path.join(target_dir, file.get_relpath())
+
+            if os.path.exists(filepath_in_temp):
+                filetype = Filetype.FILETYPE_DIR if os.path.isdir(filepath_in_temp) else Filetype.FILETYPE_FILE
+                previous_digest = file.get_digest()
+                actual_digest = File(filepath_in_temp, target_dir, filetype=filetype).digest().decode('utf-8')
+
+                if previous_digest != actual_digest:
+                    print('Digest check failed:', file.get_relpath(), previous_digest, '!=', actual_digest)
+                    return False
+
+        return True
+
     def restore(self):
         # First uncompress in a temporary folder in case there is any error
         temp_dir = tempfile.TemporaryDirectory()
 
         self.get_latest_backup(temp_dir.name)
+        self._extract_zip(temp_dir.name, 'backup.zip')
 
-        # Extract zip
-        print('...Extracting zip')
-        with zipfile.ZipFile(os.path.join(temp_dir.name, 'backup.zip'), 'r') as zipf:
-            zipf.extractall(temp_dir.name)
+        if self._digest_coincides(temp_dir.name):
+            # Move files to be replaced to a temporary directory just in case
+            replaced_files_dir = os.path.join(tempfile.gettempdir(), 'replaced_files')
+            os.makedirs(replaced_files_dir, exist_ok=True)
 
-        # Move files to be replaced to a temporary directory just in case
-        replaced_files_dir = os.path.join(tempfile.gettempdir(), 'replaced_files')
-        os.makedirs(replaced_files_dir, exist_ok=True)
+            print('...Copying files from temp')
+            for file in self.group.get_files():
+                filepath_in_temp = os.path.join(temp_dir.name, file.get_relpath())
+                filepath_in_replaced_files_dir = os.path.join(replaced_files_dir, file.get_relpath())
 
-        print('...Copying files')
-        for file in self.group.get_files():
-            filepath_in_temp = os.path.join(temp_dir.name, file.get_relpath())
-            filepath_in_replaced_files_dir = os.path.join(replaced_files_dir, file.get_relpath())
-            if os.path.exists(filepath_in_temp):
-                if file.exists():
-                    # Move file to temporary dir
-                    shutil.move(file.get_filepath(), filepath_in_replaced_files_dir)
-                    # Move extracted file to original path
-                    shutil.move(filepath_in_temp, file.get_filepath())
+                if os.path.exists(filepath_in_temp):
+                    if file.exists():
+                        # Move file to temporary dir
+                        shutil.move(file.get_filepath(), filepath_in_replaced_files_dir)
+                        # Move extracted file to original path
+                        shutil.move(filepath_in_temp, file.get_filepath())
+                        print('...Restored', file.get_relpath())
 
-        print('...Previous files moved to ' + replaced_files_dir)
+            print('...Previous files moved to ' + replaced_files_dir)
+        else:
+            raise ValueError('Couldn\'t restore files: Digest doesn\'t match.')

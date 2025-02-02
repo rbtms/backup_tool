@@ -21,7 +21,7 @@ class Config:
         self.manager_type: ManagerType = self.DEFAULT_MANAGER_TYPE
 
     def __str__(self):
-        return yaml.dump(self.to_dict(), Dumper=yaml.Dumper, sort_keys=False)
+        return yaml.dump(self._to_dict(), Dumper=yaml.Dumper, sort_keys=False)
 
     def find_group_with_name(self, name):
         """Search for a group with a given name"""
@@ -59,10 +59,15 @@ class Config:
         config_yaml = None
 
         if self.TRY_TO_FETCH_REMOTE_CONFIG:
-            config_yaml = get_config_file_contents()
+            try:
+                config_yaml = get_config_file_contents()
+            except Exception:
+                ...
 
         # If the config doesn't exist on remote, attempt to load it on local
         if config_yaml is None:
+            print('...Failed to load remote config. Attempting local')
+
             if Path(self.DEFAULT_FILEPATH).is_file():
                 try:
                     with open(self.DEFAULT_FILEPATH, 'r', encoding='utf8') as f:
@@ -80,6 +85,8 @@ class Config:
             self.rotation_number = config['rotation_number']
             self.manager_type = ManagerType(config['manager_type'])
             self.groups = self._parse_groups(config['groups'], self.manager_type)
+        else:
+            print('...Failed to load remote and local config. Creating new one')
 
     def _parse_groups(self, groups_dict: dict, manager_type: ManagerType):
         """Parse groups from a dictionary"""
@@ -93,7 +100,7 @@ class Config:
 
     def save(self):
         """Save config to a file, local or remote"""
-        config_dict = self.to_dict(int(time.time()))
+        config_dict = self._to_dict(int(time.time()))
         config_yaml = yaml.dump(config_dict, Dumper=yaml.Dumper)
 
         if self.manager_type == ManagerType.LOCAL:
@@ -108,9 +115,9 @@ class Config:
 
             update_config_file(tmpfile)
 
-    def to_dict(self, t=None):
+    def _to_dict(self, _time=None):
         return {
-            'time': int(time.time()) if t is None else t,
+            'time': self.time if _time is None else _time,
             'rotation_number': self.rotation_number,
             'manager_type': self.manager_type.value,
             'groups': [ group.to_dict() for group in self.groups ]

@@ -1,7 +1,8 @@
 #!/usr/bin/scripts/backup/.venv/bin/python
 import argparse
 from config import Config
-from backup_manager import BackupManager
+from filegroup import FileGroup
+from backup_manager import BackupManager, ManagerType
 from backup_managers.manager_drive import get_remote_file, upload_remote_file, delete_remote_file
 
 def get_parser():
@@ -44,10 +45,10 @@ def get_parser():
     removefile_parser.add_argument("filename", type=str, help="Relative filepath")
 
     # group set
-    add_group_parser = subparsers.add_parser("setproperty", help="Set a group property")
-    add_group_parser.add_argument("group_name", type=str, help="Name of the group")
-    add_group_parser.add_argument("group_property", type=str, help="Name of the property")
-    add_group_parser.add_argument("group_property_value", type=str, help="New value")
+    setproperty_parser = subparsers.add_parser("setproperty", help="Set a group property")
+    setproperty_parser.add_argument("group_name", type=str, help="Name of the group")
+    setproperty_parser.add_argument("group_property", type=str, help="Name of the property")
+    setproperty_parser.add_argument("group_property_value", type=str, help="New value")
 
     # group backup
     backup_group_parser = subparsers.add_parser("save", help="Backup a group")
@@ -62,8 +63,8 @@ def get_parser():
     get_all_parser.add_argument("target_dir", type=str, help="Target directory")
 
     # group restore
-    backup_group_parser = subparsers.add_parser("restore", help="Restore a group backup")
-    backup_group_parser.add_argument("group_name", type=str, help="Name of the group to restore")
+    restore_group_parser = subparsers.add_parser("restore", help="Restore a group backup")
+    restore_group_parser.add_argument("group_name", type=str, help="Name of the group to restore")
 
     # remote get
     remote_get_parser = subparsers.add_parser('remoteget', help='Get a remote file')
@@ -71,8 +72,8 @@ def get_parser():
     remote_get_parser.add_argument("target_dir", type=str, help="Target directory")
 
     # remote upload
-    remote_remove_parser = subparsers.add_parser('remoteupload', help='Upload a file to remote')
-    remote_remove_parser.add_argument("filename", type=str, help="Filename")
+    remote_upload_parser = subparsers.add_parser('remoteupload', help='Upload a file to remote')
+    remote_upload_parser.add_argument("filename", type=str, help="Filename")
 
     # remote remove
     remote_remove_parser = subparsers.add_parser('remotedel', help='Remove a remote file')
@@ -80,7 +81,7 @@ def get_parser():
 
     return parser
 
-def get_group(group_name, config):
+def get_group(group_name, config) -> FileGroup:
     """Find a group raising an error on failure"""
     group = config.find_group_with_name(group_name)
 
@@ -139,7 +140,7 @@ def get_all_backups(target_dir, config):
     for group in config.groups:
         group.get_all_backups(target_dir)
 
-def list_current_backups(manager_type):
+def list_current_backups(manager_type: ManagerType):
     BackupManager(None, manager_type).list_backups()
 
 def restore_group(group_name, config):
@@ -157,6 +158,8 @@ def main():
     config = Config()
     config.load()
 
+    start_config = str(config)
+
     if args.command is None:
         print()
         print(config)
@@ -164,19 +167,14 @@ def main():
         list_current_backups(config.manager_type)
     elif args.command == 'add':
         add_group(args.group_name, args.group_basepath, config)
-        config.save()
     elif args.command == 'remove':
         remove_group(args.group_name, config)
-        config.save()
     elif args.command == 'addfile':
         add_file(args.group_name, args.filename, config)
-        config.save()
     elif args.command == 'removefile':
         remove_file(args.group_name, args.filename, config)
-        config.save()
     elif args.command == 'setproperty':
         set_group_property(args.group_name, args.group_property, args.group_property_value, config)
-        config.save()
     elif args.command == 'get':
         get_backup(args.group_name, args.target_dir, config)
     elif args.command == 'getall':
@@ -193,5 +191,9 @@ def main():
         delete_remote_file(args.file_id)
     else:
         raise ValueError('Invalid command: ' + args.command)
+
+    # Detect changes on config
+    if start_config != str(config):
+        config.save()
 
 main()

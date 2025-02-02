@@ -21,7 +21,7 @@ class FileGroup:
 
     def get_name(self): return self._name
     def get_basepath(self): return self._basepath
-    def get_files(self): return self._files
+    def get_files(self) -> list[File]: return self._files
     def get_md5(self): return self._md5
 
     def _find_file_with_path(self, filepath):
@@ -85,7 +85,16 @@ class FileGroup:
         file = self._find_file_with_path(filepath)
         self._files.remove(file)
 
+    def _update_digests(self):
+        print('...Updating digests')
+
+        for file in self._files:
+            file.update_digest()
+
+        self._md5 = self.digest()
+
     def backup(self, rotation_number: int):
+        self._update_digests()
         self._backup_manager.backup(rotation_number)
 
     def get_latest_backup(self, target_dir):
