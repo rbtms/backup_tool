@@ -7,6 +7,7 @@ from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
 from output_formatting import print_directory_tree
+from .abstract_manager import AbstractManager
 
 credentials = service_account.Credentials.from_service_account_file(
     filename=os.path.join(os.path.dirname(__file__), '.client_secrets.json')
@@ -57,7 +58,7 @@ class DriveFile:
             return [ DriveFile(file, self._service)
                     for file in self._service.files().list(q=f"'{self.id}' in parents").execute()['files'] ]
 
-class BackupDrive():
+class ManagerDrive(AbstractManager):
     CONFIG_FILE_NAME = '.backup_config.yaml'
 
     def __init__(self, name):
@@ -78,6 +79,7 @@ class BackupDrive():
             raise ValueError('Invalid byte number:', byte_n)
 
     def _print_storage_quotas(self):
+        # pylint: disable=no-member
         quotas = self._service.about().get(fields="storageQuota").execute()
 
         print()
@@ -85,6 +87,7 @@ class BackupDrive():
         print('Left:', self._bytes_to_readable_amount(int(quotas['storageQuota']['limit'])))
 
     def _get_root_files(self):
+        # pylint: disable=no-member
         """Get the files in the root folder"""
         return [ DriveFile(file, self._service)
                 for file in self._service.files().list(q="parents = 'root'").execute()['files'] ]
@@ -130,6 +133,7 @@ class BackupDrive():
 
             media = MediaFileUpload(filepath, resumable=True)
 
+            # pylint: disable=no-member
             self._service.files().create(
                 body=file_metadata,
                 media_body=media,
@@ -140,6 +144,7 @@ class BackupDrive():
 
 
     def _change_file_name(self, file_id, new_name):
+        # pylint: disable=no-member
         self._service.files().update(fileId=file_id, body={'name': new_name}).execute()
 
     def create_dir(self):
@@ -152,6 +157,7 @@ class BackupDrive():
             }
 
             try:
+                # pylint: disable=no-member
                 self._service.files().create(body=file_metadata, fields="id").execute()
             except HttpError as error:
                 print(f"An error occurred: {error}")
@@ -234,13 +240,14 @@ def get_remote_file(file_id, target_dir):
     service = build_service()
 
     # Get file metadata
+    # pylint: disable=no-member
     file_dict = service.files().get(fileId=file_id).execute()
 
     file = DriveFile(file_dict, service)
     file.download(os.path.join(target_dir, file_dict['name']))
 
 def upload_remote_file(filepath):
-    manager = BackupDrive('noname')
+    manager = ManagerDrive('noname')
     manager._upload_file(filepath, None, os.path.basename(filepath))
 
 def delete_remote_file(file_id):
@@ -250,7 +257,7 @@ def delete_remote_file(file_id):
 
 def get_config_file_contents():
     temp_dir = tempfile.TemporaryDirectory()
-    manager = BackupDrive('noname')
+    manager = ManagerDrive('noname')
     files = manager._get_root_files()
 
     if any([ file.name == CONFIG_FILE_NAME for file in files ]):
@@ -265,7 +272,7 @@ def get_config_file_contents():
         return None
 
 def update_config_file(filepath):
-    manager = BackupDrive('noname')
+    manager = ManagerDrive('noname')
     files = manager._get_root_files()
 
     # Rotate config files

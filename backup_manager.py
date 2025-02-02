@@ -4,8 +4,9 @@ import shutil
 import tempfile
 from enum import Enum
 from file import Filetype
-from backup_managers.manager_local import BackupLocal
-from backup_managers.manager_drive import BackupDrive
+from backup_managers.manager_local import ManagerLocal
+from backup_managers.manager_drive import ManagerDrive
+from backup_managers.abstract_manager import AbstractManager
 
 class ManagerType(Enum):
     LOCAL = 'LOCAL'
@@ -15,8 +16,17 @@ class BackupManager():
     def __init__(self, group, manager_type: ManagerType):
         self.group = group
 
-        managers = { ManagerType.LOCAL: BackupLocal, ManagerType.DRIVE: BackupDrive }
-        self._manager = managers[manager_type]('NO_GROUP' if group is None else self.group.get_name())
+        self._manager: AbstractManager = self.build_manager_from_type(manager_type)
+
+    def build_manager_from_type(self, manager_type: ManagerType) -> AbstractManager:
+        group_name = 'NO_GROUP' if self.group is None else self.group.get_name()
+
+        if manager_type == ManagerType.LOCAL:
+            return ManagerLocal(group_name)
+        elif manager_type == ManagerType.DRIVE:
+            return ManagerDrive(group_name)
+        else:
+            raise ValueError('Incorrect manager type: ' + manager_type.value)
 
     def _ask_for_confirmation(self, question):
         """Ask a prompt to the user"""

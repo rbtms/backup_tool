@@ -1,8 +1,9 @@
 import os
 import shutil
 import pathlib
+from .abstract_manager import AbstractManager
 
-class BackupLocal():
+class ManagerLocal(AbstractManager):
     BACKUP_FOLDER = '/home/alvaro/backups' # Folder where to put the backups
 
     def __init__(self, group_name):
@@ -40,9 +41,6 @@ class BackupLocal():
         """Copy all backups for a given group to a directory"""
         for file in pathlib.Path(self._group_backup_folder).iterdir():
             shutil.copy(str(file.absolute()), target_dir)
-
-    def retrieve(self):
-        ...
 
     def clean_backups(self):
         # Being a bit paranoid
