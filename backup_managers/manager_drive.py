@@ -1,13 +1,16 @@
 import os
 import io
 import tempfile
+from typing import Optional
 from googleapiclient.discovery import build, Resource
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
+from file import File
 from output_formatting import print_directory_tree
 from .abstract_manager import AbstractManager
+
 
 credentials = service_account.Credentials.from_service_account_file(
     filename=os.path.join(os.path.dirname(__file__), '.client_secrets.json')
@@ -63,7 +66,7 @@ class ManagerDrive(AbstractManager):
 
     def __init__(self, name):
         self._group_backup_folder = name
-        self._service = build_service()
+        self._service = _build_service()
 
     def _bytes_to_readable_amount(self, byte_n: int):
         """Convert a number of bytes to a readable string"""
@@ -127,7 +130,7 @@ class ManagerDrive(AbstractManager):
             if dir_name is not None:
                 dir_id = self._get_directory_id(dir_name)
                 if dir_id is not None:
-                    file_metadata['parents']: [dir_id]
+                    file_metadata['parents'] = [dir_id]
                 else:
                     raise ValueError('Could not upload backup. Directory ' + dir_name + ' doesn\'t exist.')
 
@@ -141,7 +144,6 @@ class ManagerDrive(AbstractManager):
             ).execute()
         except HttpError as err:
             print(f"An error occurred: {err}")
-
 
     def _change_file_name(self, file_id, new_name):
         # pylint: disable=no-member
@@ -167,20 +169,20 @@ class ManagerDrive(AbstractManager):
         files = self._get_files_in_dir_by_name(self._group_backup_folder)
 
         # Remove backup.zip.4
-        if any([file.name == f'{base_backup_file}.4' for file in files]):
-            file = [ file for file in files if file.name == f'{base_backup_file}.4' ][0]
+        file = _find_file_with_name(files, f'{base_backup_file}.4')
+        if file is not None:
             file.delete()
 
         # backup.zip.1 -> backup.zip.2...
         for n in range(rotation_number):
             m = rotation_number - n
-            if any([file.name == f'{base_backup_file}.{m-1}' for file in files]):
-                file = [ file for file in files if file.name == f'{base_backup_file}.{m-1}' ][0]
+            file = _find_file_with_name(files, f'{base_backup_file}.{m-1}')
+            if file is not None:
                 file.change_name(f'{base_backup_file}.{m}')
 
         # backup.zip -> backup.zip.1
-        if any([file.name == base_backup_file for file in files]):
-            file = [ file for file in files if file.name == base_backup_file ][0]
+        file = _find_file_with_name(files, base_backup_file)
+        if file is not None:
             file.change_name(f'{base_backup_file}.1')
 
     def move_zip(self, zip_path):
@@ -233,11 +235,18 @@ class ManagerDrive(AbstractManager):
             for file in files:
                 file.download(os.path.join(target_dir, file.name))
 
-def build_service() -> Resource:
+def _build_service() -> Resource:
     return build('drive', 'v3', credentials=credentials)
 
+def _find_file_with_name(files: list[DriveFile], name: str) -> Optional[DriveFile]:
+    for file in files:
+        if file.name == name:
+            return file
+
+    return None
+
 def get_remote_file(file_id, target_dir):
-    service = build_service()
+    service = _build_service()
 
     # Get file metadata
     # pylint: disable=no-member
@@ -251,7 +260,7 @@ def upload_remote_file(filepath):
     manager._upload_file(filepath, None, os.path.basename(filepath))
 
 def delete_remote_file(file_id):
-    service = build_service()
+    service = _build_service()
     file = DriveFile({'id': file_id, 'name': '', 'mimeType': ''}, service)
     file.delete()
 
@@ -278,20 +287,20 @@ def update_config_file(filepath):
     # Rotate config files
 
     # Remove .backup_config.yaml.4
-    if any([file.name == f'{CONFIG_FILE_NAME}.4' for file in files]):
-        file = [ file for file in files if file.name == f'{CONFIG_FILE_NAME}.4' ][0]
+    file = _find_file_with_name(files, f'{CONFIG_FILE_NAME}.4')
+    if file is not None:
         file.delete()
 
     # .backup_config.yaml.1 -> .backup_config.yaml.2...
     for n in range(CONFIG_FILE_ROTATION):
         m = CONFIG_FILE_ROTATION - n
-        if any([file.name == f'{CONFIG_FILE_NAME}.{m-1}' for file in files]):
-            file = [ file for file in files if file.name == f'{CONFIG_FILE_NAME}.{m-1}' ][0]
+        file = _find_file_with_name(files, f'{CONFIG_FILE_NAME}.{m-1}')
+        if file is not None:
             file.change_name(f'{CONFIG_FILE_NAME}.{m}')
 
     # .backup_config.yaml.zip -> .backup_config.yaml.1
-    if any([file.name == CONFIG_FILE_NAME for file in files]):
-        file = [ file for file in files if file.name == CONFIG_FILE_NAME ][0]
+    file = _find_file_with_name(files, CONFIG_FILE_NAME)
+    if file is not None:
         file.change_name(f'{CONFIG_FILE_NAME}.1')
 
     # Upload file
