@@ -45,7 +45,7 @@ class Config:
         if self.group_with_name_exists(group_name):
             raise ValueError('Group "' + group_name + '" already exists.')
 
-        self.groups.append(FileGroup(group_name, group_basepath))
+        self.groups.append(FileGroup(group_name, group_basepath, None, self.manager_type))
 
     def remove_group_with_name(self, name: str):
         """Remove the group from config with a given name"""
