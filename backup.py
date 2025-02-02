@@ -18,6 +18,9 @@ def get_parser():
             get <group name> <target directory>
             getall
             restore <group name>
+            remoteget <file id> <target directory>
+            remoteupload <filepath>
+            remoteremove <file id>
     """
     parser = argparse.ArgumentParser(description="Backup utilities")
     subparsers = parser.add_subparsers(dest="command")
