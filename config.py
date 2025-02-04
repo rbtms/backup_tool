@@ -2,8 +2,10 @@ import os
 import time
 from pathlib import Path
 import tempfile
+from datetime import datetime
 import yaml
 from filegroup import FileGroup
+from file import Filetype
 from backup_manager import ManagerType
 from backup_managers.manager_drive import get_config_file_contents, update_config_file
 
@@ -22,6 +24,37 @@ class Config:
 
     def __str__(self):
         return yaml.dump(self._to_dict(), Dumper=yaml.Dumper, sort_keys=False)
+
+    def pretty_print(self):
+        ansi_blue = '\033[1;94m'
+        ansi_red = '\033[1;91m'
+        ansi_reset = '\033[0m'
+        bottle_path = '/home/alvaro/.var/app/com.usebottles.bottles/data/bottles/bottles/'
+
+        print()
+        print(f'{ansi_blue}Time{ansi_reset}:', datetime.fromtimestamp(self.time))
+        print(f'{ansi_blue}File rotations{ansi_reset}:', self.rotation_number)
+        print(f'{ansi_blue}Manager Type{ansi_reset}:', self.manager_type.value)
+        print()
+        print(f'{ansi_blue}Groups{ansi_reset}:')
+
+        for group in self.groups:
+            # Replace some paths for ease of read
+            basepath = group.get_basepath()
+            basepath = basepath.replace('/home/alvaro/.var/app/com.usebottles.bottles/data/bottles/bottles/', f'{ansi_red}[BOTTLE]{ansi_reset} ')
+            print(f'{" "*4}{ansi_blue}{group.get_name()}{ansi_reset} - {basepath}')
+
+            for file in group.get_files():
+                relpath = file.get_relpath()
+                relpath = relpath.replace(bottle_path, '[BOTTLE]')
+
+
+                if file.get_filetype() == Filetype.FILETYPE_DIR:
+                    relpath = ansi_blue + relpath + ansi_reset
+
+                print(f'{" "*8}{relpath}')
+
+        print()
 
     def find_group_with_name(self, name):
         """Search for a group with a given name"""

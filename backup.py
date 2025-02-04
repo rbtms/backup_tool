@@ -26,7 +26,10 @@ def get_parser():
     subparsers = parser.add_subparsers(dest="command")
 
     # list
-    subparsers.add_parser("list", help="List all groups")
+    subparsers.add_parser("list", help="List all files")
+
+    # config
+    subparsers.add_parser("config", help="Show the config file")
 
     # group add
     add_group_parser = subparsers.add_parser("add", help="Add a new group")
@@ -164,6 +167,8 @@ def main():
     start_config = str(config)
 
     if args.command is None:
+        config.pretty_print()
+    elif args.command == 'config':
         print()
         print(config)
     elif args.command == 'list':
