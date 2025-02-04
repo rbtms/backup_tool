@@ -10,8 +10,6 @@ class FileGroup:
             raise ValueError('basepath can\'t be empty.')
         elif manager_type is None:
             raise ValueError('manager_type can\'t be None.')
-        elif not os.path.exists(basepath):
-            raise ValueError('basepath "' + basepath + '"doesn\'t exist.')
 
         self._name = name
         self._basepath = basepath

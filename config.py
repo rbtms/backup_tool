@@ -77,6 +77,8 @@ class Config:
 
         if self.group_with_name_exists(group_name):
             raise ValueError('Group "' + group_name + '" already exists.')
+        elif not os.path.exists(group_basepath):
+            raise ValueError('basepath "' + group_basepath + '"doesn\'t exist.')
 
         self.groups.append(FileGroup(group_name, group_basepath, None, self.manager_type))
 
