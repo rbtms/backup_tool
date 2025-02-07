@@ -17,6 +17,7 @@ def get_parser():
             backup <group name>
             get <group name> <target directory>
             getall
+            saveall
             restore <group name>
             remoteget <file id> <target directory>
             remoteupload <filepath>
@@ -56,17 +57,21 @@ def get_parser():
     setproperty_parser.add_argument("group_property", type=str, help="Name of the property")
     setproperty_parser.add_argument("group_property_value", type=str, help="New value")
 
-    # group backup
+    # save
     backup_group_parser = subparsers.add_parser("save", help="Backup a group")
     backup_group_parser.add_argument("group_name", type=str, help="Name of the group to backup")
 
-    # group get
+    # get
     get_group_backup_parser = subparsers.add_parser("get", help="Copy the latest backup a group to a directory")
     get_group_backup_parser.add_argument("group_name", type=str, help="Name of the group")
     get_group_backup_parser.add_argument("target_dir", type=str, help="Target directory")
 
+    # getall
     get_all_parser = subparsers.add_parser('getall', help="Copy all the files to a directory")
     get_all_parser.add_argument("target_dir", type=str, help="Target directory")
+
+    # saveall
+    get_all_parser = subparsers.add_parser('saveall', help="Backup all groups")
 
     # group restore
     restore_group_parser = subparsers.add_parser("restore", help="Restore a group backup")
@@ -87,7 +92,7 @@ def get_parser():
 
     return parser
 
-def get_group(group_name, config) -> FileGroup:
+def get_group(group_name, config: Config) -> FileGroup:
     """Find a group raising an error on failure"""
     group = config.find_group_with_name(group_name)
 
@@ -96,60 +101,66 @@ def get_group(group_name, config) -> FileGroup:
     else:
         return group
 
-def add_group(group_name, group_basepath, config):
+def add_group(group_name, group_basepath, config: Config):
     """
         Add a new group
     """
     config.add_group(group_name, group_basepath)
 
-def remove_group(group_name, config):
+def remove_group(group_name, config: Config):
     group = get_group(group_name, config)
     group.clean_backups()
     config.remove_group_with_name(group_name)
 
-def add_file(group_name, filename, config):
+def add_file(group_name, filename, config: Config):
     """
         Add a file to a group
     """
     group = get_group(group_name, config)
     group.add_file_with_path(filename)
 
-def remove_file(group_name, filename, config):
+def remove_file(group_name, filename, config: Config):
     """
         Remove a file from a group
     """
     group = get_group(group_name, config)
     group.remove_file_with_relpath(filename)
 
-def set_group_property(group_name, property_name, property_value, config):
+def set_group_property(group_name, property_name, property_value, config: Config):
     """
         Modify a group property
     """
     group = get_group(group_name, config)
     group.set_property(property_name, property_value)
 
-def backup_group(group_name, config):
+def backup_group(group_name, config: Config, force_if_unchanged=False):
     """
         Backup the files of a group
     """
     group = get_group(group_name, config)
-    group.backup(config.rotation_number)
+    group.backup(config.get_rotation_number(), force_if_unchanged=force_if_unchanged)
 
-def get_backup(group_name, target_dir, config):
+def backup_all_groups(config: Config):
+    for group in config.get_groups():
+        print()
+        group.backup(config.get_rotation_number(), force_if_unchanged=False)
+
+def get_backup(group_name, target_dir, config: Config):
     """
         Get the latest backup of a group
     """
     group = get_group(group_name, config)
     group.get_latest_backup(target_dir)
 
-def get_all_backups(target_dir, config):
-    for group in config.groups:
+def get_all_backups(target_dir, config: Config):
+    for group in config.get_groups():
+        print()
         group.get_all_backups(target_dir)
 
 def list_current_backups(manager_type: ManagerType):
     BackupManager(None, manager_type).list_backups()
 
-def restore_group(group_name, config):
+def restore_group(group_name, config: Config):
     """
         Restore the files of a group
     """
@@ -172,7 +183,7 @@ def main():
         print()
         print(config)
     elif args.command == 'list':
-        list_current_backups(config.manager_type)
+        list_current_backups(config.get_manager_type())
     elif args.command == 'add':
         add_group(args.group_name, args.group_basepath, config)
     elif args.command == 'remove':
@@ -188,7 +199,9 @@ def main():
     elif args.command == 'getall':
         get_all_backups(args.target_dir, config)
     elif args.command == 'save':
-        backup_group(args.group_name, config)
+        backup_group(args.group_name, config, force_if_unchanged=False)
+    elif args.command == 'saveall':
+        backup_all_groups(config)
     elif args.command == 'restore':
         restore_group(args.group_name, config)
     elif args.command == 'remoteget':

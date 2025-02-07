@@ -84,16 +84,25 @@ class FileGroup:
         self._files.remove(file)
 
     def _update_digests(self):
-        print('...Updating digests')
+        print(f'[{self._name}] ...Updating digests')
 
         for file in self._files:
             file.update_digest()
 
         self._md5 = self.digest()
 
-    def backup(self, rotation_number: int):
-        self._update_digests()
-        self._backup_manager.backup(rotation_number)
+    def backup(self, rotation_number: int, force_if_unchanged: bool=False):
+        if all([ not file.exists() for file in self._files ]):
+            print(f'[{self._name}] Group doesn\'t have any files to backup. Skipping')
+        else:
+            previous_digest = self._md5
+            self._update_digests()
+
+            # If the files haven't changed and the force flag is off
+            if previous_digest == self._md5 and not force_if_unchanged:
+                print(f'[{self._name}] ...Digest is the same ({self._md5}). Skipping')
+            else:
+                self._backup_manager.backup(rotation_number)
 
     def get_latest_backup(self, target_dir):
         """Copy the latest backup to a directory"""

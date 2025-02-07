@@ -7,7 +7,6 @@ from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
-from file import File
 from output_formatting import print_directory_tree
 from .abstract_manager import AbstractManager
 
@@ -29,15 +28,15 @@ class DriveFile:
         self._service = service
 
     def delete(self):
-        print(f'...Deleting {self.name} ({self.id})')
+        print(f'[{self.name}] ...Deleting ({self.id})')
         self._service.files().delete(fileId=self.id).execute()
 
     def change_name(self, new_name):
-        print(f'...Changing name of {self.name} to {new_name}')
+        print(f'[{self.name}]  ...Changing name to {new_name}')
         self._service.files().update(fileId=self.id, body={'name': new_name}).execute()
 
     def download(self, path):
-        print(f'...Downloading {self.name} ({self.id})')
+        print(f'[{self.name}] ...Downloading ({self.id})')
 
         try:
             request_file = self._service.files().get_media(fileId=self.id)

@@ -46,7 +46,7 @@ class BackupManager():
             Returns True if all files exists or the user has decided to continue
             Returns False if the user has decided to not continue
         """
-        print('...Seeing if all files exist')
+        print(f'[{self.group.get_name()}] ...Seeing if all files exist')
 
         for file in self.group.get_files():
             if not file.exists():
@@ -58,7 +58,7 @@ class BackupManager():
 
     def _zip_files(self, zip_path):
         """Zip all the files in a group"""
-        print('...Zipping files')
+        print(f'[{self.group.get_name()}] ...Zipping files')
 
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file in self.group.get_files():
@@ -76,7 +76,7 @@ class BackupManager():
                         zipf.write(file.get_filepath(), arcname=file.get_relpath())
 
     def backup(self, rotation_number: int):
-        print('...Creating backup')
+        print(f'[{self.group.get_name()}] ...Creating backup')
 
         temp_dir = tempfile.TemporaryDirectory()
         zip_path = os.path.join(temp_dir.name, self.group.get_name() + '.zip')
@@ -90,25 +90,25 @@ class BackupManager():
             self._manager.move_zip(zip_path)
 
     def clean_backups(self):
-        print('...Cleaning backups of ' + self.group.get_name())
+        print(f'[{self.group.get_name()}] ...Cleaning backups')
         self._manager.clean_backups()
 
     def list_backups(self):
         self._manager.list_backups()
 
     def get_latest_backup(self, target_dir):
-        print('...Getting latest backup')
+        print(f'[{self.group.get_name()}] ...Getting latest backup to {target_dir}')
         self._manager.copy_latest_backup(target_dir)
 
     def get_all_backups(self, target_dir):
         group_dir = os.path.join(target_dir, self.group.get_name())
-        print(f'...Copying {self.group.get_name()} to {group_dir}')
+        print(f'[{self.group.get_name()}] ...Copying to {group_dir}')
 
         os.makedirs(group_dir, exist_ok=True)
         self._manager.copy_all_backups(group_dir)
 
     def _extract_zip(self, target_dir, filename):
-        print('...Extracting zip')
+        print(f'[{self.group.get_name()}] ...Extracting zip')
         with zipfile.ZipFile(os.path.join(target_dir, filename), 'r') as zipf:
             zipf.extractall(target_dir)
 
@@ -140,7 +140,7 @@ class BackupManager():
             replaced_files_dir = os.path.join(tempfile.gettempdir(), 'replaced_files')
             os.makedirs(replaced_files_dir, exist_ok=True)
 
-            print('...Copying files from temp')
+            print(f'[{self.group.get_name()}] ...Copying files from temp')
             for file in self.group.get_files():
                 filepath_in_temp = os.path.join(temp_dir.name, file.get_relpath())
                 filepath_in_replaced_files_dir = os.path.join(replaced_files_dir, file.get_relpath())
@@ -152,8 +152,8 @@ class BackupManager():
 
                     # Move extracted file to original path
                     shutil.move(filepath_in_temp, file.get_filepath())
-                    print('...Restored', file.get_relpath())
+                    print(f'[{self.group.get_name()}] ...Restored', file.get_relpath())
 
-            print('...Previous files moved to ' + replaced_files_dir)
+            print(f'[{self.group.get_name()}] ...Previous files moved to ' + replaced_files_dir)
         else:
             raise ValueError('Couldn\'t restore files: Digest doesn\'t match.')

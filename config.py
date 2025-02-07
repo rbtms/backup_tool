@@ -25,6 +25,15 @@ class Config:
     def __str__(self):
         return yaml.dump(self._to_dict(), Dumper=yaml.Dumper, sort_keys=False)
 
+    def get_groups(self):
+        return self.groups
+
+    def get_rotation_number(self):
+        return self.rotation_number
+
+    def get_manager_type(self):
+        return self.manager_type
+
     def pretty_print(self):
         ansi_blue = '\033[1;94m'
         ansi_red = '\033[1;91m'
