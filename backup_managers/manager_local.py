@@ -35,7 +35,7 @@ class ManagerLocal(AbstractManager):
         if os.path.exists(zip_path):
             shutil.copy(zip_path, target_dir)
         else:
-            print('There are no backups in ' + self._group_backup_folder + '.')
+            print('[LOCAL] There are no backups in ' + self._group_backup_folder + '.')
 
     def copy_all_backups(self, target_dir):
         """Copy all backups for a given group to a directory"""

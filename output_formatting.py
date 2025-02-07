@@ -1,23 +1,23 @@
 def print_directory_tree(d, prefix=''):
     """Recursively prints a tree-like structure of a dictionary"""
-    ANSI_BLUE = '\033[1;94m'
-    ANSI_RED = '\033[1;91m'
-    ANSI_RESET = '\033[0m'
+    ansi_blue = '\033[1;94m'
+    ansi_red = '\033[1;91m'
+    ansi_reset = '\033[0m'
 
     for index, (key, value) in enumerate(d.items()):
         connector = '├── ' if index != len(d) - 1 else '└── '
 
         # Color it differently depending if it's a directory, a recent backup or other file
         if isinstance(value['files'], dict) and len(value['files']) > 0:
-            color = ANSI_BLUE
+            color = ansi_blue
         elif key == 'backup.zip':
-            color = ANSI_RED
+            color = ansi_red
         else:
             color = ''
 
         # Print the line
         key_id = " "*(30 - len(prefix + connector+key)) +  f' ({value["id"]})'
-        print(f"{prefix}{connector}{color}{key}{key_id}{ANSI_RESET}")
+        print(f"{prefix}{connector}{color}{key}{key_id}{ansi_reset}")
 
         # Recursive call if it's a directory
         if isinstance(value['files'], dict) and len(value['files']) > 0:

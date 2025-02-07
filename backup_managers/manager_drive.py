@@ -27,16 +27,21 @@ class DriveFile:
 
         self._service = service
 
+    def _log(self, msg):
+        ansi_blue = '\033[1;94m'
+        ansi_reset = '\033[0m'
+        print(f'[{ansi_blue}{self.name}{ansi_reset} ({self.id})] {msg}')
+
     def delete(self):
-        print(f'[{self.name}] ...Deleting ({self.id})')
+        self._log('...Deleting')
         self._service.files().delete(fileId=self.id).execute()
 
     def change_name(self, new_name):
-        print(f'[{self.name}]  ...Changing name to {new_name}')
+        self._log(f'...Changing name to {new_name}')
         self._service.files().update(fileId=self.id, body={'name': new_name}).execute()
 
     def download(self, path):
-        print(f'[{self.name}] ...Downloading ({self.id})')
+        self._log(f'...Downloading to {path}')
 
         try:
             request_file = self._service.files().get_media(fileId=self.id)
@@ -120,7 +125,7 @@ class ManagerDrive(AbstractManager):
             - dir_name: Parent directory in drive. If None, it uploads it to the root
             - filename: Filename the file is to be uploaded as
         """
-        print(f'...Uploading {filepath}')
+        print(f'[DRIVE] ...Uploading {filepath} to {dir_name}/{filename}')
 
         try:
             file_metadata = {'name': filename}
@@ -142,7 +147,7 @@ class ManagerDrive(AbstractManager):
                 fields='id'
             ).execute()
         except HttpError as err:
-            print(f"An error occurred: {err}")
+            print(f"[DRIVE] An error occurred: {err}")
 
     def _change_file_name(self, file_id, new_name):
         # pylint: disable=no-member
@@ -229,7 +234,7 @@ class ManagerDrive(AbstractManager):
         files = self._get_files_in_dir_by_name(self._group_backup_folder)
 
         if files is None:
-            print(f'...File group {self._group_backup_folder} doesn\'t exist.')
+            print(f'[DRIVE] ...File group {self._group_backup_folder} doesn\'t exist.')
         else:
             for file in files:
                 file.download(os.path.join(target_dir, file.name))
@@ -276,7 +281,7 @@ def get_config_file_contents():
         with open(temp_path, 'r', encoding='utf8') as f:
             return f.read()
     else:
-        print("Couldn't read remote config file.")
+        print("[DRIVE] Couldn't read remote config file.")
         return None
 
 def update_config_file(filepath):

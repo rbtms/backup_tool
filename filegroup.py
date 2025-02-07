@@ -1,5 +1,6 @@
 import os
 import hashlib
+#import logging
 from typing import Optional
 from file import File, Filetype
 from backup_manager import BackupManager, ManagerType
@@ -21,6 +22,12 @@ class FileGroup:
     def get_basepath(self): return self._basepath
     def get_files(self) -> list[File]: return self._files
     def get_md5(self): return self._md5
+
+    def _log(self, msg):
+        ansi_blue = '\033[1;94m'
+        ansi_reset = '\033[0m'
+
+        print(f'[{ansi_blue}{self._name}{ansi_reset}] {msg}')
 
     def _find_file_with_path(self, filepath):
         for file in self._files:
@@ -84,7 +91,7 @@ class FileGroup:
         self._files.remove(file)
 
     def _update_digests(self):
-        print(f'[{self._name}] ...Updating digests')
+        self._log('...Updating digests')
 
         for file in self._files:
             file.update_digest()
@@ -93,14 +100,14 @@ class FileGroup:
 
     def backup(self, rotation_number: int, force_if_unchanged: bool=False):
         if all([ not file.exists() for file in self._files ]):
-            print(f'[{self._name}] Group doesn\'t have any files to backup. Skipping')
+            self._log('No files to backup. Skipping')
         else:
             previous_digest = self._md5
             self._update_digests()
 
             # If the files haven't changed and the force flag is off
             if previous_digest == self._md5 and not force_if_unchanged:
-                print(f'[{self._name}] ...Digest is the same ({self._md5}). Skipping')
+                self._log(f'Digest hasn\'t changed ({self._md5}). Skipping')
             else:
                 self._backup_manager.backup(rotation_number)
 
