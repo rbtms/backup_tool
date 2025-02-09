@@ -7,7 +7,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
-from output_formatting import print_directory_tree
+from utils import print_directory_tree
 from .abstract_manager import AbstractManager
 
 credentials = service_account.Credentials.from_service_account_file(

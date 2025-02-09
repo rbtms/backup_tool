@@ -7,6 +7,7 @@ from file import File, Filetype
 from backup_managers.manager_local import ManagerLocal
 from backup_managers.manager_drive import ManagerDrive
 from backup_managers.abstract_manager import AbstractManager
+from utils import ask_for_confirmation
 
 class ManagerType(Enum):
     LOCAL = 'LOCAL'
@@ -28,17 +29,6 @@ class BackupManager():
         else:
             raise ValueError('Incorrect manager type: ' + manager_type.value)
 
-    def _ask_for_confirmation(self, question):
-        """Ask a prompt to the user"""
-        response = input(f'{question} (y/n) ')
-
-        if response == 'n' or response == 'N':
-            return False
-        elif response == 'y' or response == 'Y':
-            return True
-        else:
-            return self._ask_for_confirmation(question)
-
     def _check_files(self):
         """
             Check if all the files in the group exist. Ask for confirmation if not
@@ -47,10 +37,11 @@ class BackupManager():
         """
         self.group.log('...Seeing if all files exist')
 
+        # Return false if the confirmation is negative for any file
         for file in self.group.get_files():
             if not file.exists():
                 question = f"File {file.get_filepath()} doesn't exist. Continue?"
-                if self._ask_for_confirmation(question) is False:
+                if ask_for_confirmation(question) is False:
                     return False
 
         return True

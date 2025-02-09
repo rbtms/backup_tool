@@ -4,6 +4,7 @@ from config import Config
 from filegroup import FileGroup
 from backup_manager import BackupManager, ManagerType
 from backup_managers.manager_drive import get_remote_file, upload_remote_file, delete_remote_file
+from utils import ask_for_confirmation
 
 def get_parser():
     """
@@ -110,9 +111,10 @@ def add_group(group_name, group_basepath, config: Config):
     config.add_group(group_name, group_basepath)
 
 def remove_group(group_name, config: Config):
-    group = get_group(group_name, config)
-    group.clean_backups()
-    config.remove_group_with_name(group_name)
+    if ask_for_confirmation(f'Are you sure you want to remove {group_name}?'):
+        group = get_group(group_name, config)
+        group.clean_backups()
+        config.remove_group_with_name(group_name)
 
 def add_file(group_name, filename, config: Config):
     """

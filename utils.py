@@ -23,3 +23,14 @@ def print_directory_tree(d, prefix=''):
         if isinstance(value['files'], dict) and len(value['files']) > 0:
             new_prefix = prefix + ('│   ' if index != len(d) - 1 else '    ')
             print_directory_tree(value['files'], new_prefix)
+
+def ask_for_confirmation(question):
+    """Ask a prompt to the user"""
+    response = input(f'{question} (y/n) ')
+
+    if response == 'n' or response == 'N':
+        return False
+    elif response == 'y' or response == 'Y':
+        return True
+    else:
+        return ask_for_confirmation(question)
