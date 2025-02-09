@@ -1,6 +1,5 @@
 import os
 import hashlib
-#import logging
 from typing import Optional
 from file import File, Filetype
 from backup_manager import BackupManager, ManagerType
@@ -23,7 +22,7 @@ class FileGroup:
     def get_files(self) -> list[File]: return self._files
     def get_md5(self): return self._md5
 
-    def _log(self, msg):
+    def log(self, msg):
         ansi_blue = '\033[1;94m'
         ansi_reset = '\033[0m'
 
@@ -46,7 +45,7 @@ class FileGroup:
             raise ValueError('Group ' + self._name + ' doesn\'t have property ' + name + '.')
 
     def digest(self):
-        """MD5 hash of its files"""
+        """Process and return the MD5 hash of its files"""
         md5_hash = hashlib.md5()
 
         for file in self._files:
@@ -91,7 +90,7 @@ class FileGroup:
         self._files.remove(file)
 
     def _update_digests(self):
-        self._log('...Updating digests')
+        self.log('...Updating digests')
 
         for file in self._files:
             file.update_digest()
@@ -100,14 +99,14 @@ class FileGroup:
 
     def backup(self, rotation_number: int, force_if_unchanged: bool=False):
         if all([ not file.exists() for file in self._files ]):
-            self._log('No files to backup. Skipping')
+            self.log('No files to backup. Skipping')
         else:
             previous_digest = self._md5
             self._update_digests()
 
             # If the files haven't changed and the force flag is off
             if previous_digest == self._md5 and not force_if_unchanged:
-                self._log(f'Digest hasn\'t changed ({self._md5}). Skipping')
+                self.log(f'Digest hasn\'t changed ({self._md5}). Skipping')
             else:
                 self._backup_manager.backup(rotation_number)
 
@@ -126,6 +125,7 @@ class FileGroup:
         self._backup_manager.clean_backups()
 
     def restore(self):
+        """Restore a backup to it's basepath"""
         self._backup_manager.restore()
 
     def to_dict(self):

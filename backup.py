@@ -60,6 +60,8 @@ def get_parser():
     # save
     backup_group_parser = subparsers.add_parser("save", help="Backup a group")
     backup_group_parser.add_argument("group_name", type=str, help="Name of the group to backup")
+    # --force
+    backup_group_parser.add_argument('--force', action='store_true', help='Force the backup')
 
     # get
     get_group_backup_parser = subparsers.add_parser("get", help="Copy the latest backup a group to a directory")
@@ -199,7 +201,7 @@ def main():
     elif args.command == 'getall':
         get_all_backups(args.target_dir, config)
     elif args.command == 'save':
-        backup_group(args.group_name, config, force_if_unchanged=False)
+        backup_group(args.group_name, config, force_if_unchanged=args.force)
     elif args.command == 'saveall':
         backup_all_groups(config)
     elif args.command == 'restore':
