@@ -111,7 +111,7 @@ def add_group(group_name, group_basepath, config: Config):
     config.add_group(group_name, group_basepath)
 
 def remove_group(group_name, config: Config):
-    if ask_for_confirmation(f'Are you sure you want to remove {group_name}?'):
+    if ask_for_confirmation(f'Are you sure you want to remove {group_name}? This action will remove existing backups.'):
         group = get_group(group_name, config)
         group.clean_backups()
         config.remove_group_with_name(group_name)
