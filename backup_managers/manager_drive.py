@@ -87,10 +87,11 @@ class ManagerDrive(AbstractManager):
     def _print_storage_quotas(self):
         # pylint: disable=no-member
         quotas = self._service.about().get(fields="storageQuota").execute()
+        used_bytes = int(quotas['storageQuota']['usage'])
 
         print()
         print('Used:', self._bytes_to_readable_amount(int(quotas['storageQuota']['usage'])))
-        print('Left:', self._bytes_to_readable_amount(int(quotas['storageQuota']['limit'])))
+        print('Left:', self._bytes_to_readable_amount(int(quotas['storageQuota']['limit']) - used_bytes))
 
     def _get_root_files(self):
         # pylint: disable=no-member
@@ -308,3 +309,4 @@ def update_config_file(filepath):
 
     # Upload file
     manager._upload_file(filepath, None, CONFIG_FILE_NAME)
+
